@@ -1,0 +1,6 @@
+name = "aibtc-roadmap"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "ROADMAP_KV"
+id = "f67c1108673448978cc2514973191bdf"
