@@ -221,13 +221,31 @@ async function scanForMentions(env) {
     processedIds.add(ev.timestamp);
 
     for (const item of data.items) {
-      // Match against title (case-insensitive, word boundary-ish)
-      const titleMatch = item.title && preview.includes(item.title.toLowerCase());
-      // Match against GitHub URL or repo path
+      // Match against title (case-insensitive)
+      const titleLower = item.title ? item.title.toLowerCase() : '';
+      const titleMatch = titleLower && preview.includes(titleLower);
+      // Also match slugified title (e.g. "AIBTC Projects" → "aibtc-projects")
+      const titleSlug = titleLower.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const slugMatch = titleSlug.length > 3 && preview.includes(titleSlug);
+      // Match against GitHub URL, repo path, or repo name
       const ghPath = item.githubUrl ? item.githubUrl.replace(/^https?:\/\/(www\.)?github\.com\//, '').replace(/\/$/, '').toLowerCase() : null;
-      const urlMatch = ghPath && (preview.includes(item.githubUrl.toLowerCase()) || preview.includes(ghPath));
+      const ghRepoName = ghPath ? ghPath.split('/').pop() : null;
+      const urlMatch = ghPath && (
+        preview.includes(item.githubUrl.toLowerCase()) ||
+        preview.includes(ghPath) ||
+        (ghRepoName && ghRepoName.length > 3 && preview.includes(ghRepoName))
+      );
+      // Match against website hostname if present
+      const homepage = item.githubData?.homepage;
+      let siteMatch = false;
+      if (homepage) {
+        try {
+          const host = new URL(homepage).hostname.toLowerCase();
+          siteMatch = preview.includes(host);
+        } catch {}
+      }
 
-      if (titleMatch || urlMatch) {
+      if (titleMatch || slugMatch || urlMatch || siteMatch) {
         if (!item.mentions) item.mentions = { count: 0 };
         item.mentions.count += 1;
         changed = true;
@@ -235,7 +253,7 @@ async function scanForMentions(env) {
           itemId: item.id,
           itemTitle: item.title,
           agent: ev.agent || null,
-          matchType: titleMatch ? 'title' : 'url',
+          matchType: titleMatch ? 'title' : slugMatch ? 'slug' : urlMatch ? 'url' : 'site',
         });
       }
     }
