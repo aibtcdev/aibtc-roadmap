@@ -208,11 +208,12 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` }, 400, corsHeaders());
   }
 
-  // Verify repo is public and fetch metadata
-  const ghData = await fetchGithubData(ghUrl, context.env);
-  if (!ghData) {
-    return jsonResponse({ error: 'Could not access this GitHub repo. It must be public (open source).' }, 400, corsHeaders());
-  }
+  // Fetch GitHub metadata (non-blocking — rate limits shouldn't prevent submission)
+  const ghData = await fetchGithubData(ghUrl, context.env) || {
+    type: 'repo', number: null, title: body.title.trim(),
+    state: 'active', merged: false, assignees: [], labels: [], stars: 0,
+    fetchedAt: null, // null signals "needs refresh" to the GET stale-check
+  };
 
   const now = new Date().toISOString();
   const item = {
