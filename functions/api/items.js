@@ -8,12 +8,14 @@ async function getData(env) {
   const data = raw || { version: 1, items: [] };
 
   // Lazy migration: normalize items missing new fields
-  if (data.version < 2) {
+  if (data.version < 3) {
     for (const item of data.items) {
       if (item.claimedBy === undefined) item.claimedBy = null;
       if (!Array.isArray(item.deliverables)) item.deliverables = [];
+      if (!Array.isArray(item.ratings)) item.ratings = [];
+      if (!item.reputation) item.reputation = { average: 0, count: 0 };
     }
-    data.version = 2;
+    data.version = 3;
   }
 
   return data;
@@ -93,6 +95,12 @@ async function fetchGithubData(url, env) {
   } catch {
     return null;
   }
+}
+
+function computeReputation(ratings) {
+  if (!ratings || ratings.length === 0) return { average: 0, count: 0 };
+  const sum = ratings.reduce((s, r) => s + r.score, 0);
+  return { average: Math.round((sum / ratings.length) * 10) / 10, count: ratings.length };
 }
 
 // Add agent to contributors list if not already present
@@ -227,6 +235,8 @@ export async function onRequestPost(context) {
     status,
     claimedBy: null,
     deliverables: [],
+    ratings: [],
+    reputation: { average: 0, count: 0 },
     createdAt: now,
     updatedAt: now,
   };
@@ -338,6 +348,47 @@ export async function onRequestPut(context) {
       itemId: item.id,
       itemTitle: item.title,
       data: { url: d.url.trim(), title: (d.title || '').trim() },
+    }));
+    return jsonResponse({ item }, 200, corsHeaders());
+  }
+
+  // ── Rate action ──
+  if (body.action === 'rate') {
+    const score = body.score;
+    if (!Number.isInteger(score) || score < 1 || score > 5) {
+      return jsonResponse({ error: 'score must be an integer from 1 to 5' }, 400, corsHeaders());
+    }
+    const review = (body.review || '').trim();
+    if (review.length > 280) {
+      return jsonResponse({ error: 'review must be 280 characters or fewer' }, 400, corsHeaders());
+    }
+    if (!Array.isArray(item.ratings)) item.ratings = [];
+    // Upsert: replace existing rating from this agent
+    const existingIdx = item.ratings.findIndex(r => r.btcAddress === agent.btcAddress);
+    const rating = {
+      agentId: agent.agentId,
+      btcAddress: agent.btcAddress,
+      displayName: agent.displayName,
+      score,
+      review: review || null,
+      ratedAt: new Date().toISOString(),
+    };
+    if (existingIdx !== -1) {
+      item.ratings[existingIdx] = rating;
+    } else {
+      item.ratings.push(rating);
+    }
+    item.reputation = computeReputation(item.ratings);
+    addContributor(item, agent);
+    item.updatedAt = new Date().toISOString();
+    data.items[idx] = item;
+    await saveData(context.env, data);
+    context.waitUntil(recordEvent(context.env, {
+      type: 'item.rated',
+      agent,
+      itemId: item.id,
+      itemTitle: item.title,
+      data: { score, review: review || null, newAverage: item.reputation.average },
     }));
     return jsonResponse({ item }, 200, corsHeaders());
   }
