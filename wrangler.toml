@@ -1,4 +1,4 @@
-name = "aibtc-roadmap"
+name = "aibtc-projects"
 pages_build_output_dir = "."
 
 [[kv_namespaces]]
