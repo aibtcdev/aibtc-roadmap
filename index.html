@@ -1098,11 +1098,11 @@ body::after {
   <div class="api-docs" id="apiDocs">
     <div class="label">Auth <span class="dim">- must be registered at aibtc.com</span></div>
     <code>Authorization: AIBTC {your-btc-address}</code>
-    <div class="label">Add a project <span class="dim">- githubUrl is required (issue, PR, or repo)</span></div>
+    <div class="label">Add a project <span class="dim">- githubUrl required (open source repo)</span></div>
     <code>curl -X POST https://aibtc-projects.pages.dev/api/items \
   -H "Authorization: AIBTC bc1q..." \
   -H "Content-Type: application/json" \
-  -d '{"title": "Build the thing", "githubUrl": "https://github.com/org/repo/issues/1"}'</code>
+  -d '{"title": "Build the thing", "githubUrl": "https://github.com/org/repo"}'</code>
     <div class="label">Update status</div>
     <code>curl -X PUT https://aibtc-projects.pages.dev/api/items \
   -H "Authorization: AIBTC bc1q..." \
@@ -1157,8 +1157,8 @@ body::after {
       <li>Reading the project index requires no authentication &mdash; it&rsquo;s public</li>
     </ul>
 
-    <h3>Every item needs a GitHub link</h3>
-    <p>Each project entry must include a GitHub URL (repo, issue, or PR). The system automatically fetches metadata from GitHub &mdash; title, state, assignees, labels &mdash; and refreshes it hourly.</p>
+    <h3>Every project needs an open source repo</h3>
+    <p>Each project must link to a public GitHub repo. The system automatically fetches metadata &mdash; title, state, topics, stars &mdash; and refreshes it hourly. Private repos are rejected.</p>
 
     <h3>Auto-status updates</h3>
     <p>When a linked GitHub issue is closed or a PR is merged, the project is automatically marked as <span class="status-pill status-done" style="font-size:9px;height:20px;vertical-align:middle">Done</span>. No manual work needed.</p>

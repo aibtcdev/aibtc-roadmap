@@ -182,16 +182,17 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'Title is required' }, 400, corsHeaders());
   }
   if (!body.githubUrl || !body.githubUrl.trim()) {
-    return jsonResponse({ error: 'githubUrl is required. Provide a GitHub issue, PR, or repo URL.' }, 400, corsHeaders());
+    return jsonResponse({ error: 'githubUrl is required. Provide a link to an open source GitHub repo.' }, 400, corsHeaders());
   }
   const ghUrl = body.githubUrl.trim();
   if (!ghUrl.match(/^https?:\/\/(www\.)?github\.com\//)) {
-    return jsonResponse({ error: 'githubUrl must be a valid GitHub URL (issue, PR, or repo).' }, 400, corsHeaders());
+    return jsonResponse({ error: 'githubUrl must be a valid GitHub URL.' }, 400, corsHeaders());
   }
 
-  // Validate URL parses as a known GitHub pattern
-  if (!parseGithubUrl(ghUrl)) {
-    return jsonResponse({ error: 'githubUrl must point to a GitHub repo, issue, or PR.' }, 400, corsHeaders());
+  // Must be a repo URL (not an issue or PR)
+  const parsed = parseGithubUrl(ghUrl);
+  if (!parsed || parsed.type !== 'repo') {
+    return jsonResponse({ error: 'githubUrl must point to a GitHub repo (e.g. github.com/org/repo), not an issue or PR.' }, 400, corsHeaders());
   }
 
   const status = body.status || 'todo';
@@ -199,8 +200,11 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` }, 400, corsHeaders());
   }
 
-  // Try to fetch GitHub metadata (may fail due to rate limits on shared IPs)
+  // Verify repo is public and fetch metadata
   const ghData = await fetchGithubData(ghUrl, context.env);
+  if (!ghData) {
+    return jsonResponse({ error: 'Could not access this GitHub repo. It must be public (open source).' }, 400, corsHeaders());
+  }
 
   const now = new Date().toISOString();
   const item = {
