@@ -1471,11 +1471,9 @@ function renderFounder(item) {
   if (!f) return '<span class="no-founder">\u2014</span>';
   const profileUrl = f.profileUrl || `https://aibtc.com/agents/${f.btcAddress}`;
   const initial = (f.displayName || '?')[0];
-  const label = c ? 'claimed' : 'founder';
-  return `<a class="founder-chip" href="${esc(profileUrl)}" target="_blank" rel="noopener" title="${esc(f.displayName)} (${label})">
+  return `<a class="founder-chip" href="${esc(profileUrl)}" target="_blank" rel="noopener" title="${esc(f.displayName)}">
     <img class="founder-avatar" src="${btcFaceUrl(f.btcAddress, 48)}" alt="${esc(initial)}" loading="lazy" onerror="this.outerHTML='<div class=founder-avatar-fallback>${esc(initial)}</div>'">
     <span class="founder-name">${esc(f.displayName)}</span>
-    ${c ? '<span class="founder-claimed-tag">claimed</span>' : ''}
   </a>`;
 }
 
