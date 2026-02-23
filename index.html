@@ -315,6 +315,19 @@ body::after {
   transition: color var(--transition);
 }
 
+.founder-claimed-tag {
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--o);
+  background: var(--od);
+  padding: 1px 5px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
 .no-founder {
   font-family: var(--mono);
   font-size: 11px;
@@ -1102,11 +1115,6 @@ body::after {
   .contrib-avatar-overflow { width: 20px; height: 20px; font-size: 7px; margin-left: -6px; }
   .founder-avatar, .founder-avatar-fallback { width: 20px; height: 20px; }
 
-  .cell-claimed {
-    width: auto;
-    order: 7;
-  }
-
   .cell-rating {
     width: auto;
     order: 8;
@@ -1155,7 +1163,6 @@ body::after {
     <div class="th th-gh">GitHub</div>
     <div class="th th-founder">Founder</div>
     <div class="th th-date">Added</div>
-    <div class="th th-claimed">Claimed</div>
     <div class="th th-contrib">Contributors</div>
     <div class="th th-rating">Rating</div>
     <div class="th th-status">Status</div>
@@ -1367,7 +1374,6 @@ function renderLoading() {
       <div style="width:200px"><div class="skeleton-block" style="width:100px"></div></div>
       <div style="width:150px"><div class="skeleton-block" style="width:80px"></div></div>
       <div style="width:80px"><div class="skeleton-block" style="width:50px"></div></div>
-      <div style="width:140px"><div class="skeleton-block" style="width:80px"></div></div>
       <div style="width:120px"><div class="skeleton-block" style="width:60px"></div></div>
       <div style="width:90px"><div class="skeleton-block" style="width:55px"></div></div>
       <div style="width:100px"><div class="skeleton-block" style="width:65px"></div></div>
@@ -1416,7 +1422,6 @@ function render() {
       <div class="cell cell-gh">${renderGhBadge(item)}</div>
       <div class="cell cell-founder">${renderFounder(item)}</div>
       <div class="cell cell-date">${shortDate(item.createdAt)}</div>
-      <div class="cell cell-claimed">${renderClaimed(item)}</div>
       <div class="cell cell-contrib">${renderContributors(item)}</div>
       <div class="cell cell-rating">${renderRating(item)}</div>
       <div class="cell cell-status">
@@ -1461,13 +1466,16 @@ function btcFaceUrl(btcAddress, size) {
 }
 
 function renderFounder(item) {
-  const f = item.founder;
+  const c = item.claimedBy;
+  const f = c || item.founder;
   if (!f) return '<span class="no-founder">\u2014</span>';
   const profileUrl = f.profileUrl || `https://aibtc.com/agents/${f.btcAddress}`;
   const initial = (f.displayName || '?')[0];
-  return `<a class="founder-chip" href="${esc(profileUrl)}" target="_blank" rel="noopener" title="${esc(f.displayName)}">
+  const label = c ? 'claimed' : 'founder';
+  return `<a class="founder-chip" href="${esc(profileUrl)}" target="_blank" rel="noopener" title="${esc(f.displayName)} (${label})">
     <img class="founder-avatar" src="${btcFaceUrl(f.btcAddress, 48)}" alt="${esc(initial)}" loading="lazy" onerror="this.outerHTML='<div class=founder-avatar-fallback>${esc(initial)}</div>'">
     <span class="founder-name">${esc(f.displayName)}</span>
+    ${c ? '<span class="founder-claimed-tag">claimed</span>' : ''}
   </a>`;
 }
 
@@ -1492,16 +1500,6 @@ function renderContributors(item) {
     <div class="contrib-avatars">${avatars}</div>
     <span class="contrib-num ${count > 1 ? 'multi' : ''}">${count}</span>
   </div>`;
-}
-
-function renderClaimed(item) {
-  const c = item.claimedBy;
-  if (!c) return '<span class="unclaimed">\u2014</span>';
-  const profileUrl = `https://aibtc.com/agents/${c.btcAddress}`;
-  return `<a class="claimed-badge" href="${esc(profileUrl)}" target="_blank" rel="noopener" title="Claimed by ${esc(c.displayName)}">
-    <img class="claimed-badge-avatar" src="${btcFaceUrl(c.btcAddress, 36)}" alt="" loading="lazy" onerror="this.style.display='none'">
-    <span class="claimed-badge-name">${esc(c.displayName)}</span>
-  </a>`;
 }
 
 function renderDeliverables(item) {
