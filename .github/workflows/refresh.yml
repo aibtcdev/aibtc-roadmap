@@ -16,16 +16,24 @@ jobs:
       - name: Trigger refresh
         id: refresh
         run: |
+          success=false
           for attempt in 1 2 3; do
             echo "Attempt $attempt..."
-            response=$(curl -sf "https://aibtc-projects.pages.dev/api/refresh?key=$REFRESH_KEY" \
+            if response=$(curl -sf "https://aibtc-projects.pages.dev/api/refresh?key=$REFRESH_KEY" \
               -H "User-Agent: github-actions-refresh" \
-              --max-time 90 2>&1) && break
+              --max-time 90 2>&1); then
+              success=true
+              break
+            fi
             echo "Attempt $attempt failed (exit $?), retrying in 5s..."
             sleep 5
           done
           echo "$response"
           echo "response=$response" >> "$GITHUB_OUTPUT"
+          if [ "$success" != "true" ]; then
+            echo "All 3 attempts failed"
+            exit 1
+          fi
         env:
           REFRESH_KEY: ${{ secrets.REFRESH_KEY }}
 
