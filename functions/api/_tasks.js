@@ -129,16 +129,21 @@ export async function saveData(env, data) {
   await env.ROADMAP_KV.put(KV_KEY, JSON.stringify(data));
 }
 
-// Best-effort save for background tasks: on conflict, re-read version and retry once
-async function saveRetry(env, data) {
-  try {
-    await saveData(env, data);
-  } catch (err) {
-    if (err.name !== 'ConcurrencyError') throw err;
-    console.error('[saveRetry] conflict, retrying with fresh version');
-    const fresh = await env.ROADMAP_KV.get('roadmap:items', 'json');
-    data.writeVersion = fresh?.writeVersion || 0;
-    await saveData(env, data);
+// Best-effort save for background tasks: on conflict, re-read version and retry with backoff
+async function saveRetry(env, data, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await saveData(env, data);
+      return;
+    } catch (err) {
+      if (err.name !== 'ConcurrencyError') throw err;
+      console.error(`[saveRetry] conflict attempt ${attempt}/${maxRetries}`);
+      if (attempt === maxRetries) throw err;
+      const backoff = Math.min(100 * Math.pow(2, attempt - 1), 5000);
+      await new Promise(r => setTimeout(r, backoff));
+      const fresh = await env.ROADMAP_KV.get(KV_KEY, 'json');
+      data.writeVersion = fresh?.writeVersion || 0;
+    }
   }
 }
 
