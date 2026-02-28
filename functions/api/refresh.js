@@ -32,7 +32,7 @@ export async function onRequestGet(context) {
 
   // Run item-mutating scans sequentially to avoid KV write conflicts
   const mentionResult = Date.now() < deadline
-    ? await scanForMentions(context.env, { reset })
+    ? await scanForMentions(context.env, { reset, deadline })
     : { scanned: false, reason: 'time_budget' };
 
   const contributorResult = Date.now() < deadline

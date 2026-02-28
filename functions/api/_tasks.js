@@ -498,7 +498,7 @@ function extractUrlFromMessages(messages, item) {
 }
 
 // ── Mention Scanning ──
-export async function scanForMentions(env, { reset = false } = {}) {
+export async function scanForMentions(env, { reset = false, deadline } = {}) {
   // Check cooldown to avoid scanning on every request (skip on reset)
   const scanMeta = await env.ROADMAP_KV.get(MENTION_SCAN_KEY, 'json');
   if (!reset) {
@@ -557,6 +557,9 @@ export async function scanForMentions(env, { reset = false } = {}) {
   }
 
   const data = await getData(env);
+  if (deadline && Date.now() >= deadline) {
+    return { scanned: false, reason: 'time_budget' };
+  }
   let changed = false;
   const mentionEvents = [];
 
@@ -569,6 +572,7 @@ export async function scanForMentions(env, { reset = false } = {}) {
   }
 
   for (const ev of newEvents) {
+    if (deadline && Date.now() >= deadline) break;
     const preview = (ev.messagePreview || '').toLowerCase();
     processedIds.add(ev.timestamp);
 
