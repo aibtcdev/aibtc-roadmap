@@ -33,8 +33,10 @@ export async function onRequestOptions() {
 }
 
 // GET - list all items (public, no auth)
+// Optional query params: ?limit=N&offset=N for pagination
 export async function onRequestGet(context) {
   const data = await getData(context.env);
+  const url = new URL(context.request.url);
 
   // Derive status from GitHub state for every item
   for (const item of data.items) {
@@ -44,6 +46,18 @@ export async function onRequestGet(context) {
   // Kick off background tasks
   context.waitUntil(refreshStaleGithubData(context.env));
   context.waitUntil(scanForMentions(context.env));
+
+  // Optional pagination — backwards compatible (no params = full list)
+  const limitParam = url.searchParams.get('limit');
+  const offsetParam = url.searchParams.get('offset');
+
+  if (limitParam) {
+    const limit = Math.min(Math.max(parseInt(limitParam) || 50, 1), 200);
+    const offset = Math.max(parseInt(offsetParam) || 0, 0);
+    const total = data.items.length;
+    const paged = data.items.slice(offset, offset + limit);
+    return jsonResponse({ ...data, items: paged, pagination: { total, limit, offset } }, 200, corsHeaders());
+  }
 
   return jsonResponse(data, 200, corsHeaders());
 }
